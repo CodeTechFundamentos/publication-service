@@ -1,6 +1,9 @@
 package com.nutrix.query.api;
 
 import com.nutrix.command.domain.Recipe;
+import com.nutrix.command.dtos.Patient;
+import com.nutrix.command.infra.IDietRecipesRepository;
+import com.nutrix.command.infra.IFavoriteRecipesRepository;
 import com.nutrix.query.application.services.RecipeQueryService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -11,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
 
 import javax.validation.Valid;
 import java.text.SimpleDateFormat;
@@ -25,6 +29,12 @@ public class RecipeQueryController {
 
     @Autowired
     private RecipeQueryService recipeService;
+    @Autowired
+    private IFavoriteRecipesRepository favoriteRecipesRepository;
+    @Autowired
+    private IDietRecipesRepository dietRecipesRepository;
+    @Autowired
+    private RestTemplate template;
 
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     @ApiOperation(value = "Listar Recipe", notes="Método para listar todos los recipes")
@@ -61,29 +71,6 @@ public class RecipeQueryController {
             return new ResponseEntity<Recipe>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
-
-    //pending request
-//    @GetMapping(value="/getRecipesByList", consumes = MediaType.APPLICATION_JSON_VALUE,  produces = MediaType.APPLICATION_JSON_VALUE)
-//    @ApiOperation(value = "Buscar Recipe por una lista de ids", notes="Método para listar un recipe por una lista de ids")
-//    @ApiResponses({
-//            @ApiResponse(code=201, message = "recipes encontrados"),
-//            @ApiResponse(code=404, message = "recipes no encontrados")
-//    })
-//    public ResponseEntity<List<Recipe>>getRecipesByList(@Valid @RequestBody List<Integer> recipesList){
-//        try{
-//            for(Integer i: recipesList)
-//            {
-//
-//            }
-//            Optional<Recipe> recipe= recipeService.getById(id);
-//            if(!recipe.isPresent())
-//                return new ResponseEntity<Recipe>(HttpStatus.NOT_FOUND);
-//            else
-//                return new ResponseEntity<Recipe>(recipe.get(),HttpStatus.OK);
-//        }catch (Exception e){
-//            return new ResponseEntity<Recipe>(HttpStatus.INTERNAL_SERVER_ERROR);
-//        }
-//    }
 
     @GetMapping(value = "/searchRecipeByNutritionistId/{nutritionist_id}", produces = MediaType.APPLICATION_JSON_VALUE)
     @ApiOperation(value = "Buscar recipe por nutritionist id", notes = "Método para encontrar recipe por nutritionist id")
@@ -136,6 +123,27 @@ public class RecipeQueryController {
                 return new ResponseEntity<List<Recipe>>(recipes, HttpStatus.OK);
             else
                 return new ResponseEntity<List<Recipe>>(recipes, HttpStatus.NOT_FOUND);
+        }catch (Exception e){
+            return new ResponseEntity<List<Recipe>>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping(value = "/findpatientFavoriteRecipes/{patient_id}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ApiOperation(value = "Buscar Recipes favoritos de un patient", notes = "Método para listar Recipes favoritos de un patients")
+    @ApiResponses({
+            @ApiResponse(code = 201, message = "Recipes encontrados"),
+            @ApiResponse(code = 404, message = "Recipes no encontrados")
+    })
+    public ResponseEntity<List<Recipe>> findPatientFavoriteRecipes(@PathVariable("patient_id") Integer id)
+    {
+        try {
+            Patient patient = template.getForObject("http://patient-service/patient/{patient_id}", Patient.class, id);
+            if(patient == null)
+                return new ResponseEntity<List<Recipe>>(HttpStatus.NOT_FOUND);
+
+            List<Recipe> recipes = favoriteRecipesRepository.findByPatient(patient.getId());
+//            List<Recipe> recipes = favoriteRecipesRepository.findByPatient(id);
+            return new ResponseEntity<List<Recipe>>(recipes, HttpStatus.OK);
         }catch (Exception e){
             return new ResponseEntity<List<Recipe>>(HttpStatus.INTERNAL_SERVER_ERROR);
         }

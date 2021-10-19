@@ -1,8 +1,11 @@
 package com.nutrix.command.api;
 
-import com.netflix.discovery.converters.Auto;
 import com.nutrix.command.application.services.RecipeCommandService;
+import com.nutrix.command.domain.FavoriteRecipes;
 import com.nutrix.command.domain.Recipe;
+import com.nutrix.command.dtos.Patient;
+import com.nutrix.command.infra.IDietRecipesRepository;
+import com.nutrix.command.infra.IFavoriteRecipesRepository;
 import com.nutrix.query.application.services.RecipeQueryService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -13,6 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
 
 import javax.validation.Valid;
 import java.util.Optional;
@@ -26,6 +30,12 @@ public class RecipeCommandController {
     private RecipeCommandService recipeService;
     @Autowired
     private RecipeQueryService recipeQueryService;
+    @Autowired
+    private IFavoriteRecipesRepository favoriteRecipesRepository;
+    @Autowired
+    private IDietRecipesRepository dietRecipesRepository;
+    @Autowired
+    private RestTemplate template;
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @ApiOperation(value = "Registro de un Recipe de un Nutritionist", notes ="Método que registra un Recipe" )
@@ -83,4 +93,66 @@ public class RecipeCommandController {
             return new ResponseEntity<Recipe>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
+    @PostMapping(value="/newFavorite", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @ApiOperation(value = "Adición de Recipe favorita a la lista de favoritos de un patient", notes = "Método que añade una Recipe favorita a la lista de favoritos de un patient")
+    @ApiResponses({
+            @ApiResponse(code = 200, message = "Recipe añadida a la lista de favoritos del patient"),
+            @ApiResponse(code = 404, message = "Recipe o patient no encontrado")
+    })
+    public ResponseEntity<FavoriteRecipes> addFavoriteRecipe(@Valid @RequestBody FavoriteRecipes favoriteRecipes){
+        try {
+            Optional<Recipe> foundRecipe = recipeQueryService.getById(favoriteRecipes.getRecipe().getId());
+            if(!foundRecipe.isPresent())
+                return new ResponseEntity<FavoriteRecipes>(HttpStatus.NOT_FOUND);
+
+            Integer id = favoriteRecipes.getPatientId();
+            Patient foundPatient = template.getForObject("http://patient-service/patient/{id}", Patient.class, id);
+            if(foundPatient == null)
+                return new ResponseEntity<FavoriteRecipes>(HttpStatus.NOT_FOUND);
+
+            FavoriteRecipes existRecipe = favoriteRecipesRepository.findByPatientAndRecipe(favoriteRecipes.getPatientId(), favoriteRecipes.getRecipe().getId());
+            if(existRecipe!=null)
+                return new ResponseEntity<FavoriteRecipes>(HttpStatus.NOT_FOUND);
+
+            favoriteRecipesRepository.save(favoriteRecipes);
+            return ResponseEntity.status(HttpStatus.CREATED).body(favoriteRecipes);
+        }catch (Exception e){
+            return new ResponseEntity<FavoriteRecipes>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @DeleteMapping(value = "/{recipe_id}/{patient_id}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ApiOperation(value = "Eliminación de un Recipe de la lista de favoritos de un patient", notes = "Método para eliminar un Recipe de la lista de favoritos de un patient")
+    @ApiResponses({
+            @ApiResponse(code = 200, message = "Recipe eliminado"),
+            @ApiResponse(code = 404, message = "Recipe no encontrado")
+    })
+    public ResponseEntity<FavoriteRecipes> deletePatientFavoriteRecipe(@PathVariable("recipe_id") Integer recipe_id,
+                                                             @PathVariable("patient_id") Integer patient_id)
+    {
+        try{
+            Patient foundPatient = template.getForObject("http://patient-service/patient/{patient_id}", Patient.class, patient_id);
+            if(foundPatient == null)
+                return new ResponseEntity<FavoriteRecipes>(HttpStatus.NOT_FOUND);
+
+            Optional<Recipe> foundRecipe = recipeQueryService.getById(recipe_id);
+            if(!foundRecipe.isPresent())
+                return new ResponseEntity<FavoriteRecipes>(HttpStatus.NOT_FOUND);
+
+            FavoriteRecipes recipeToDelete = favoriteRecipesRepository.findByPatientAndRecipe(foundPatient.getId(), foundRecipe.get().getId());
+            //FavoriteRecipes recipeToDelete = favoriteRecipesRepository.findByPatientAndRecipe(patient_id, recipe_id);
+            if(recipeToDelete == null)
+                return new ResponseEntity<FavoriteRecipes>(HttpStatus.NOT_FOUND);
+
+            favoriteRecipesRepository.deleteById(recipeToDelete.getId());
+            return new ResponseEntity<FavoriteRecipes>(HttpStatus.OK);
+
+        }catch (Exception e){
+            return new ResponseEntity<FavoriteRecipes>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+
+    //Falta addFavoriteRecipe, findFavoriteRecipes, deleteFavoriteRecipe
 }
