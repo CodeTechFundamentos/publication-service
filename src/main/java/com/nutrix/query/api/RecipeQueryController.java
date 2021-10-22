@@ -137,12 +137,7 @@ public class RecipeQueryController {
     public ResponseEntity<List<Recipe>> findPatientFavoriteRecipes(@PathVariable("patient_id") Integer id)
     {
         try {
-            Patient patient = template.getForObject("http://patient-service/patient/{patient_id}", Patient.class, id);
-            if(patient == null)
-                return new ResponseEntity<List<Recipe>>(HttpStatus.NOT_FOUND);
-
-            List<Recipe> recipes = favoriteRecipesRepository.findByPatient(patient.getId());
-//            List<Recipe> recipes = favoriteRecipesRepository.findByPatient(id);
+            List<Recipe> recipes = favoriteRecipesRepository.findByPatient(id);
             return new ResponseEntity<List<Recipe>>(recipes, HttpStatus.OK);
         }catch (Exception e){
             return new ResponseEntity<List<Recipe>>(HttpStatus.INTERNAL_SERVER_ERROR);

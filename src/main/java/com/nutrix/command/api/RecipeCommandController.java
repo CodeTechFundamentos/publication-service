@@ -106,11 +106,6 @@ public class RecipeCommandController {
             if(!foundRecipe.isPresent())
                 return new ResponseEntity<FavoriteRecipes>(HttpStatus.NOT_FOUND);
 
-            Integer id = favoriteRecipes.getPatientId();
-            Patient foundPatient = template.getForObject("http://patient-service/patient/{id}", Patient.class, id);
-            if(foundPatient == null)
-                return new ResponseEntity<FavoriteRecipes>(HttpStatus.NOT_FOUND);
-
             FavoriteRecipes existRecipe = favoriteRecipesRepository.findByPatientAndRecipe(favoriteRecipes.getPatientId(), favoriteRecipes.getRecipe().getId());
             if(existRecipe!=null)
                 return new ResponseEntity<FavoriteRecipes>(HttpStatus.NOT_FOUND);
@@ -132,16 +127,11 @@ public class RecipeCommandController {
                                                              @PathVariable("patient_id") Integer patient_id)
     {
         try{
-            Patient foundPatient = template.getForObject("http://patient-service/patient/{patient_id}", Patient.class, patient_id);
-            if(foundPatient == null)
-                return new ResponseEntity<FavoriteRecipes>(HttpStatus.NOT_FOUND);
-
             Optional<Recipe> foundRecipe = recipeQueryService.getById(recipe_id);
             if(!foundRecipe.isPresent())
                 return new ResponseEntity<FavoriteRecipes>(HttpStatus.NOT_FOUND);
 
-            FavoriteRecipes recipeToDelete = favoriteRecipesRepository.findByPatientAndRecipe(foundPatient.getId(), foundRecipe.get().getId());
-            //FavoriteRecipes recipeToDelete = favoriteRecipesRepository.findByPatientAndRecipe(patient_id, recipe_id);
+            FavoriteRecipes recipeToDelete = favoriteRecipesRepository.findByPatientAndRecipe(patient_id, foundRecipe.get().getId());
             if(recipeToDelete == null)
                 return new ResponseEntity<FavoriteRecipes>(HttpStatus.NOT_FOUND);
 
@@ -152,7 +142,4 @@ public class RecipeCommandController {
             return new ResponseEntity<FavoriteRecipes>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
-
-
-    //Falta addFavoriteRecipe, findFavoriteRecipes, deleteFavoriteRecipe
 }
