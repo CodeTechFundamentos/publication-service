@@ -1,7 +1,6 @@
 package com.nutrix.query.api;
 
 import com.nutrix.command.domain.Recipe;
-import com.nutrix.command.dtos.Patient;
 import com.nutrix.command.infra.IDietRecipesRepository;
 import com.nutrix.command.infra.IFavoriteRecipesRepository;
 import com.nutrix.query.application.services.RecipeQueryService;
@@ -16,7 +15,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
-import javax.validation.Valid;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
