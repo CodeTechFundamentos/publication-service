@@ -1,0 +1,10 @@
+---
+applications:
+  - name: NUTRIX-PUBLICATION-SERVICE
+    path: target/publication-service-0.0.1-SNAPSHOT.jar
+    memory: 1GB
+    host: NUTRIX-PUBLICATION-SERVICE
+    instances: 1
+    buildpacks:
+      - java_buildpack
+    stack: cflinuxfs3
